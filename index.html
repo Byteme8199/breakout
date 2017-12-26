@@ -1,0 +1,192 @@
+<html>
+  <head>
+
+  </head>
+  <body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+  </body>
+
+  <script>
+    var canvas, canvasContext, ballX, ballY, ballWidth, ballSpeedX, ballSpeedY, paddleX, paddleY, paddleHeight, paddleWidth, paddleSpeedX, blocks, lives, points
+
+    var blockMap = [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
+      [0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0],
+      [0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    ]
+
+    paddleX = 400;
+    paddleY = 550;
+    paddleWidth = 100;
+    paddleHeight = 10;
+
+    ballX = 400;
+    ballY = 300;
+    ballWidth = 7;
+    ballHeight = 7;
+
+    ballSpeedX = 5;
+    ballSpeedY = 5;
+
+    paddleSpeedX = 5;
+
+    blockSize = 20
+
+    lives = 3;
+
+    points = 0;
+
+    window.onload = function() {
+      canvas = document.getElementById('gameCanvas');
+      canvasContext = canvas.getContext('2d');
+      var framesPerSecond = 60
+      setInterval(function(){
+        moveItems();
+        drawCanvas();
+      }, 1000/framesPerSecond);
+
+      canvas.addEventListener('mousemove',
+        function(evt) {
+          var mousePos = calculateMousePos(evt);
+          paddleX = mousePos.x - (paddleWidth/2);
+        }
+      );
+    }
+
+    function moveItems(){
+      ////  Move your items outside of drawing them
+
+      ////// Ball Horizontal Movement
+      ballX = ballX + ballSpeedX;
+      
+      ///  Ball Vertical Movement
+      ballY = ballY + ballSpeedY;
+
+      if(ballX > canvas.width){
+        /// Ball Hitting Right Wall
+        ballSpeedX = -ballSpeedX
+      }
+      if(ballX < 0){
+        /// Ball hitting Left Wall
+        ballSpeedX = -ballSpeedX
+      }
+
+      if(ballY < 0){
+        ///  Ball Hitting Top
+        ballSpeedY = -ballSpeedY
+      }
+
+      if(ballY > canvas.height) {
+        /// Ball Hitting bottom below Paddle
+        ballReset();
+      } 
+
+      var ball = {x: ballX, y: ballY, width: ballWidth, height: ballHeight}
+
+      blockMap.forEach(function (row, rowIndex) {
+        row.forEach(function (col,colIndex){
+          if(col > 0) {
+            var block = {x: blockSize*colIndex, y: blockSize*rowIndex, width: blockSize, height: blockSize}
+            if(collisionDetection(ball, block)){
+              
+              ballSpeedY = -ballSpeedY
+              blockMap[rowIndex][colIndex] = 0;
+              points++;
+            }
+          }
+        })
+      });
+
+      var paddle = {x: paddleX, y: paddleY, width: paddleWidth, height: paddleHeight}
+
+      if(collisionDetection(ball, paddle)) {
+        /// Ball Hitting Paddle
+        var delta = ball.x - paddle.x;
+        if(delta > 80 || delta < 20){
+          if(ballSpeedX > 0){
+            ballSpeedX += 2;
+          } else {
+            ballSpeedX -= 2;
+          }
+          ballSpeedY = -ballSpeedY;
+        } else if(delta > 40 || delta < 60){
+          if(ballSpeedX > 0){
+            ballSpeedX -= 2;
+          } else {
+            ballSpeedX += 2;
+          }
+          ballSpeedY = -ballSpeedY;
+        } else {
+          ballSpeedY = -ballSpeedY;
+        }
+         
+      }
+      
+    }
+
+    function collisionDetection(item1, item2){
+
+      if (item1.x < item2.x + item2.width &&
+        item1.x + item1.width > item2.x &&
+        item1.y < item2.y + item2.height &&
+        item1.height + item1.y > item2.y) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+    
+
+    function drawCanvas(){
+
+      /// background
+      createRectangle(0,0,canvas.width, canvas.height, 'black');
+      
+      /// paddle
+      createRectangle(paddleX, paddleY, paddleWidth, paddleHeight, 'white');
+
+      //// ball
+      createRectangle(ballX, ballY, ballWidth, ballHeight, 'red');
+
+
+      blockMap.forEach(function (row, rowIndex) {
+        row.forEach(function (col,colIndex){
+          if(col > 0) {
+            createRectangle(blockSize*colIndex,blockSize*rowIndex,blockSize,blockSize,'green')
+          }
+        })
+      });
+
+    }
+
+    function createRectangle(x, y, w, h, c){
+      canvasContext.fillStyle = c;
+      canvasContext.fillRect(x, y, w, h);
+    }
+
+    function calculateMousePos(evt) {
+      var rect = canvas.getBoundingClientRect();
+      var root = document.documentElement;
+      var mouseX = evt.clientX - rect.left - root.scrollLeft;
+      var mouseY = evt.clientY - rect.top - root.scrollTop;
+      return { x: mouseX, y: mouseY }
+    }
+
+    function ballReset(){
+      lives--;
+      ballSpeedX = 5
+      ballSpeedY = -ballSpeedY
+      ballX = canvas.width / 2;
+      ballY = canvas.height / 2
+    }
+    
+  </script>
+
+</html>
